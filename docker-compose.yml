@@ -1,0 +1,54 @@
+version: '2.1'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: blogging_app
+    #restart: unless-stopped
+    tty: true
+    depends_on:
+      db:
+        condition: service_healthy
+    links:
+      - db
+    environment:
+      server.port: 8081
+      spring.datasource.url: jdbc:postgresql://db:5432/database
+      spring.datasource.username: postgres
+      spring.datasource.password: postgres
+    ports:
+      - "8081:8081"
+    networks:
+      - app-network
+  db:
+    image: 'postgres:10.16-alpine'
+    container_name: blogging_db
+    networks:
+      - app-network
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=database
+    ports:
+      - '5434:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "database", "-U", "postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+networks:
+  app-network:
+    driver: bridge
+  default:
+    external:
+      name: blogging_network
+
+volumes:
+  db-data:
+    driver: local
